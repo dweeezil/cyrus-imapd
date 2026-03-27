@@ -1987,7 +1987,19 @@ static int send_response(void *ac, void *ic,
     smtp_envelope_t sm_env = SMTP_ENVELOPE_INITIALIZER;
     smtpclient_t *sm = NULL;
 
-    smtp_envelope_set_from(&sm_env, "");
+    char *at = strchr(src->fromaddr, '@');
+    char *q = NULL;
+    if (at) {
+	int qlen = strlen(at) + sizeof("no-reply") - 1;
+        q = xmalloc(qlen);
+        strcpy(q, "no-reply");
+        strcat(q, src->fromaddr);
+	if (q[qlen - 2] == '>')
+		q[qlen - 2] = '\0';
+        smtp_envelope_set_from(&sm_env, q);
+    } else {
+        smtp_envelope_set_from(&sm_env, "");
+    }
     smtp_envelope_add_rcpt(&sm_env, src->addr);
 
     t = time(NULL);
@@ -2066,6 +2078,8 @@ static int send_response(void *ac, void *ic,
 
     buf_free(&msgbuf);
     smtp_envelope_fini(&sm_env);
+    if (q)
+        free(q);
 
     return ret;
 }
